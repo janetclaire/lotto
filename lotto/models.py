@@ -2,7 +2,7 @@
 #
 # by Claire Harrison (claire@softwork.co.uk)
 #
-# Written for django 1.9 and python 2.7
+# Works with django 1.9 and python 2.7 or 3.5 (and probably others)
 #
 ##############################################################################################################
 
@@ -23,7 +23,7 @@ class LotteryNumbersDescriptor(object):
     def __set__(self, instance, val):
         '''Check the list of numbers in val according to the appropriate rule, sort it, and store it as a string'''
         if hasattr(instance, 'lotterytype'): instance.lotterytype.checkNumbers(val) # check numbers before saving
-        else: instance.lottery.lotterytype.checkNumbers(val)
+        else: instance.draw.lotterytype.checkNumbers(val)
         instance.__dict__[self.field_name] = ','.join(str(i) for i in sorted(val)) # arrange numbers in ascending order
 
 class LotteryTypeMeta(ModelBase):
@@ -72,47 +72,47 @@ class LotteryType(with_metaclass(LotteryTypeMeta, models.Model)):
             seen.append(x)
         return True
 
-    def checkMatches(self, lottery, entry):
+    def checkMatches(self, draw, entry):
         '''Find how many numbers in the given entry are also in the winning_combo'''
-        return len([n for n in entry.entry if n in lottery.winning_combo])
+        return len([n for n in entry.entry if n in draw.winning_combo])
 
-    def findWinners(self, lottery):
-        return self.sub._findWinners(lottery)
+    def findWinners(self, draw):
+        return self.sub._findWinners(draw)
 
-    def allocatePrize(self, lottery):
-        return self.sub._allocatePrize(lottery)
+    def allocatePrize(self, draw):
+        return self.sub._allocatePrize(draw)
 
     # The following two static methods exist to be extended by subclasses
     @staticmethod
-    def _findWinners(lottery):
-        '''Find the winners of this lottery, and how many matches they have.
+    def _findWinners(draw):
+        '''Find the winners of this draw, and how many matches they have.
            Store the results in the object, and return them.
            The rule is that the punter(s) with the largest number of matches win(s) -- as long as they have at least the minimum number of matches.
            If more than one punter has the winning number of matches, they share the prize between them.'''
-        lottery.maxMatches, lottery.winners = 0, set()
-        for e in lottery.entry_set.all():
-            matches = lottery._checkMatches(e)
+        draw.maxMatches, draw.winners = 0, set()
+        for e in draw.entry_set.all():
+            matches = draw._checkMatches(e)
            
-            if matches > lottery.maxMatches: 
-                lottery.maxMatches = matches
-                if matches >= lottery.lotterytype.min_matches: # cant win with too few matches
-                    lottery.winners = {e}
-            elif matches < lottery.lotterytype.min_matches: continue
-            elif matches == lottery.maxMatches: 
-                lottery.winners.add(e)
-        return lottery.maxMatches, lottery.winners
+            if matches > draw.maxMatches: 
+                draw.maxMatches = matches
+                if matches >= draw.lotterytype.min_matches: # cant win with too few matches
+                    draw.winners = {e}
+            elif matches < draw.lotterytype.min_matches: continue
+            elif matches == draw.maxMatches: 
+                draw.winners.add(e)
+        return draw.maxMatches, draw.winners
 
     @staticmethod
-    def _allocatePrize(lottery):
+    def _allocatePrize(draw):
         '''Divide the prize money (including any rollover) among the winners, if there are any winners.
            Otherwise add the prize money to the rollover.'''
-        if not lottery.winners: 
-            lottery.lotterytype.rollover += lottery.prize
+        if not draw.winners: 
+            draw.lotterytype.rollover += draw.prize
             return None
-        amount = (lottery.prize + lottery.lotterytype.rollover) / len(lottery.winners)
-        lottery.lotterytype.rollover = decimal.Decimal('0.00')
-        lottery.lotterytype.save()
-        for w in lottery.winners: Win(entry=w, prize=amount).save()
+        amount = (draw.prize + draw.lotterytype.rollover) / len(draw.winners)
+        draw.lotterytype.rollover = decimal.Decimal('0.00')
+        draw.lotterytype.save()
+        for w in draw.winners: Win(entry=w, prize=amount).save()
 
     #class Meta:               
     #    abstract = True # dont tell django this is an abstract class, or we wont be able to use it in foreign keys
@@ -131,31 +131,31 @@ class MoreComplexLottery(LotteryType):
     spotprize_value = models.DecimalField(decimal_places=2, max_digits=20)
     
     @staticmethod
-    def _findWinners(lottery):
+    def _findWinners(draw):
         # the main prize
-        lottery.maxMatches, lottery.winners = super(MoreComplexLottery, lottery.lotterytype.sub)._findWinners(lottery)
+        draw.maxMatches, draw.winners = super(MoreComplexLottery, draw.lotterytype.sub)._findWinners(draw)
         # the additional prizes
-        lottery.spotprize_winners = set()
-        if lottery.lotterytype.sub.spotprize_nummatches < lottery.maxMatches or not lottery.winners:
-            for e in [e for e in lottery.entry_set.all() if not lottery.winners or e not in lottery.winners]:
-                if lottery._checkMatches(e) >= lottery.lotterytype.sub.spotprize_nummatches:
-                    lottery.spotprize_winners.add(e)
-        return lottery.maxMatches, lottery.winners
+        draw.spotprize_winners = set()
+        if draw.lotterytype.sub.spotprize_nummatches < draw.maxMatches or not draw.winners:
+            for e in [e for e in draw.entry_set.all() if not draw.winners or e not in draw.winners]:
+                if draw._checkMatches(e) >= draw.lotterytype.sub.spotprize_nummatches:
+                    draw.spotprize_winners.add(e)
+        return draw.maxMatches, draw.winners
 
     @staticmethod
-    def _allocatePrize(lottery):
+    def _allocatePrize(draw):
         # the main prize
-        super(MoreComplexLottery, lottery.lotterytype.sub)._allocatePrize(lottery)
+        super(MoreComplexLottery, draw.lotterytype.sub)._allocatePrize(draw)
         # the additional prizes
-        for w in lottery.spotprize_winners: Win(entry=w, prize=lottery.lotterytype.sub.spotprize_value, wintype=Win.SPOTPRIZE).save()
+        for w in draw.spotprize_winners: Win(entry=w, prize=draw.lotterytype.sub.spotprize_value, wintype=Win.SPOTPRIZE).save()
 
     class Meta:
         verbose_name = 'More Complex Lottery Type'
         verbose_name_plural = 'More Complex Lottery Types'
 
 @python_2_unicode_compatible
-class Lottery(models.Model):
-    '''A single lottery which has a specific draw date, and will eventually have a winning combination'''
+class Draw(models.Model):
+    '''A single draw which has a specific draw date, and will eventually have a winning combination'''
     lotterytype = models.ForeignKey(LotteryType)
     drawdate = models.DateTimeField()
     prize = models.DecimalField(decimal_places=2, max_digits=20)
@@ -169,7 +169,7 @@ class Lottery(models.Model):
     def _checkMatches(self, entry):
         return self.lotterytype.checkMatches(self, entry)
 
-    def draw(self, *numbers):
+    def makeDraw(self, *numbers):
         '''Store the winning numbers, find the winners and allocate the prize'''
         self.winning_combo = numbers
         self.save()
@@ -185,16 +185,16 @@ class Punter(models.Model):
 
 @python_2_unicode_compatible
 class Entry(models.Model):
-    '''An entry to a lottery made by a punter'''
+    '''An entry to a draw made by a punter'''
     punter = models.ForeignKey(Punter)
-    lottery = models.ForeignKey(Lottery)
+    draw = models.ForeignKey(Draw)
     time = models.DateTimeField(auto_now_add=True, blank=True)
     _entry = models.CommaSeparatedIntegerField(db_column='entry', max_length=100, default=None) # this field for db storage (default=None prevents blank field being automatically stored)
     entry = LotteryNumbersDescriptor('_entry') # use this field in coding
-    def __str__(self): return 'Entry by {} for lottery {}'.format(self.punter, self.lottery)
+    def __str__(self): return 'Entry by {} for draw {}'.format(self.punter, self.draw)
     class Meta:
         verbose_name_plural = "Entries"
-        unique_together = (('punter', 'lottery'))  # dont allow punter to enter lottery more than once
+        unique_together = (('punter', 'draw'))  # dont allow punter to enter draw more than once
 
 @python_2_unicode_compatible
 class Win(models.Model):

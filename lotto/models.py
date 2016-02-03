@@ -39,7 +39,8 @@ class LotteryTypeMeta(ModelBase):
 
 @python_2_unicode_compatible
 class LotteryType(with_metaclass(LotteryTypeMeta, models.Model)):
-    '''A series of lottery draws with the same rules, and the possibility of a rollover if no prize is allocated'''
+    '''Abstract superclass for different lottery types.
+       A series of lottery draws with the same rules, and the possibility of a rollover if no prize is allocated'''
     name = models.CharField(max_length=30)
     number_of_numbers = models.PositiveIntegerField()
     max_val = models.PositiveIntegerField()
@@ -48,7 +49,7 @@ class LotteryType(with_metaclass(LotteryTypeMeta, models.Model)):
 
     @property
     def sub(self):
-        '''Return the current object as an object of its actual type (which is a subclass of LotteryType)'''
+        '''Return the current object downcast to an object of its actual type (which is a subclass of LotteryType)'''
         for name in self.subclasses:
             if hasattr(self, name): return getattr(self, name)
 
@@ -163,8 +164,6 @@ class Draw(models.Model):
     winning_combo = LotteryNumbersDescriptor('_winning_combo') # use this field for in coding
 
     def __str__(self): return '{}, with draw on date {}'.format(self.lotterytype, self.drawdate)
-    class Meta:
-        verbose_name_plural = 'Lotteries'
 
     def _checkMatches(self, entry):
         return self.lotterytype.checkMatches(self, entry)

@@ -29,7 +29,8 @@ class LotteryNumbersDescriptor(object):
 
 class LotteryTypeMeta(ModelBase):
     '''Metaclass to collect the names of subclasses of LotteryType as they are created.
-       (They are used later in the method LotteryType.sub to find the actual class of LotteryType objects.)'''
+       (They are used later in the method LotteryType.sub to find the actual class of LotteryType objects.)
+       As written it will only work with direct subclasses of LotteryType'''
     def __new__(cls, name, parents, dct):
         '''When creating a new class, if it is a subclass of LotteryType, lowercase its name and 
            store it in the LotteryType.subclasses class variable.'''
@@ -181,6 +182,8 @@ class Draw(models.Model):
 class Punter(models.Model):
     '''An individual or syndicate who enters one or more lotteries'''
     name = models.CharField(max_length=100)
+    address = models.TextField(null=True)
+    email = models.EmailField(null=True)
     password = models.BinaryField()
     def __str__(self): return self.name
 

@@ -75,6 +75,7 @@ class PunterListFilterWin(admin.SimpleListFilter):
 
 class PunterAdmin(admin.ModelAdmin):
     list_filter = PunterListFilter, PunterListFilterWin
+    list_display = 'name', 'address', 'email'
 
 admin.site.register(MoreComplexLottery)
 admin.site.register(SimpleLottery)

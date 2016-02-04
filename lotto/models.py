@@ -2,7 +2,7 @@
 #
 # by Claire Harrison (claire@softwork.co.uk)
 #
-# Works with django 1.9 and python 2.7 or 3.5 (and probably others)
+# Works with django 1.9.1 and python 2.7.11 or django 1.9.2 and python 3.5.1 (and probably others)
 #
 ##############################################################################################################
 
@@ -19,6 +19,7 @@ class LotteryNumbersDescriptor(object):
         self.field_name = field_name
     def __get__(self, instance, owner):
         val = instance.__dict__[self.field_name]
+        if not val: return []
         return [int(i) for i in val.split(',')]
     def __set__(self, instance, val):
         '''Check the list of numbers in val according to the appropriate rule, sort it, and store it as a string'''
@@ -33,7 +34,7 @@ class LotteryTypeMeta(ModelBase):
         '''When creating a new class, if it is a subclass of LotteryType, lowercase its name and 
            store it in the LotteryType.subclasses class variable.'''
         if name == 'LotteryType':
-            if not dct.has_key('subclasses'): dct['subclasses'] = set()
+            if not 'subclasses' in dct: dct['subclasses'] = set()
         elif 'LotteryType' in [p.__name__ for p in parents]: parents[0].subclasses.add(name.lower())
         return super(LotteryTypeMeta, cls).__new__(cls, name, parents, dct)
 
@@ -170,6 +171,7 @@ class Draw(models.Model):
 
     def makeDraw(self, *numbers):
         '''Store the winning numbers, find the winners and allocate the prize'''
+        if self.winning_combo: raise RuntimeError("Draw has already been made")
         self.winning_combo = numbers
         self.save()
         self.lotterytype.findWinners(self)
@@ -190,6 +192,8 @@ class Entry(models.Model):
     time = models.DateTimeField(auto_now_add=True, blank=True)
     _entry = models.CommaSeparatedIntegerField(db_column='entry', max_length=100, default=None) # this field for db storage (default=None prevents blank field being automatically stored)
     entry = LotteryNumbersDescriptor('_entry') # use this field in coding
+    @property
+    def won(self): return True if self.win else False
     def __str__(self): return 'Entry by {} for draw {}'.format(self.punter, self.draw)
     class Meta:
         verbose_name_plural = "Entries"

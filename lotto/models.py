@@ -162,8 +162,8 @@ class Draw(models.Model):
     lotterytype = models.ForeignKey(LotteryType)
     drawdate = models.DateTimeField()
     prize = models.DecimalField(decimal_places=2, max_digits=20)
-    _winning_combo = models.CommaSeparatedIntegerField(db_column='winning_combo', max_length=100, blank=True)
-    winning_combo = LotteryNumbersDescriptor('_winning_combo') # use this field for in coding
+    db_winning_combo = models.CommaSeparatedIntegerField(db_column='winning_combo', max_length=100, blank=True)
+    winning_combo = LotteryNumbersDescriptor('db_winning_combo') # use this field for in coding
 
     def __str__(self): return '{}, with draw on date {}'.format(self.lotterytype, self.drawdate)
 
@@ -183,7 +183,7 @@ class Punter(models.Model):
     '''An individual or syndicate who enters one or more lotteries'''
     name = models.CharField(max_length=100)
     address = models.TextField(null=True)
-    email = models.EmailField(null=True)
+    email = models.EmailField(unique=True)
     password = models.BinaryField()
     def __str__(self): return self.name
 
@@ -193,8 +193,8 @@ class Entry(models.Model):
     punter = models.ForeignKey(Punter)
     draw = models.ForeignKey(Draw)
     time = models.DateTimeField(auto_now_add=True, blank=True)
-    _entry = models.CommaSeparatedIntegerField(db_column='entry', max_length=100, default=None) # this field for db storage (default=None prevents blank field being automatically stored)
-    entry = LotteryNumbersDescriptor('_entry') # use this field in coding
+    db_entry = models.CommaSeparatedIntegerField(db_column='entry', max_length=100, default=None) # this field for db storage (default=None prevents blank field being automatically stored)
+    entry = LotteryNumbersDescriptor('db_entry') # use this field in coding
     @property
     def won(self): return True if self.win else False
     def __str__(self): return 'Entry by {} for draw {}'.format(self.punter, self.draw)

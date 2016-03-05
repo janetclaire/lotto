@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<p>These are all your entries, {{punter.name}}
+<table>
+<thead>
+<th>Lottery Type</th><th>Draw Date</th><th>Winning numbers</th><th>Your entry id</th><th>Your entry</th><th>Your Prize</th>
+</thead>
+<tbody>
+{% for entry in object_list %}
+<tr><td>{{entry.draw.lotterytype}}</td><td> {{entry.draw.drawdate}}</td><td>  {{entry.draw.winning_combo}}</td><td>{{entry.pk}}</td><td> {{entry.entry}}</td><td>{{entry.win.prize}}
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

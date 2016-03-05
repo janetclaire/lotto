@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<form method=POST>
+{% csrf_token %}
+<h2>Welcome {{punter}}</h2>
+{{form.non_field_errors}}
+{{form.punter.errors}}
+{{form.punter.as_hidden}}
+{{form.draw.errors}}
+<p><label>Choose the draw you would like to enter</label>{{form.draw}}
+{{form.db_entry.errors}}
+<p><label>Enter your numbers here</label>{{form.db_entry}}
+<p><input type=submit value="Enter">
+</form>
+<a href='/entries/{{punter.pk}}/'>see all your entries</a>
+{% endblock %}

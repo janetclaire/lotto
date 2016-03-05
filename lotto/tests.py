@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from django.test import TestCase
 from django.db import IntegrityError
 import datetime, decimal
@@ -15,7 +16,7 @@ class SimpleLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw._winning_combo, '1,2,3')
+        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
         self.assertEqual(self.draw.winning_combo, [2,4,5])
@@ -37,7 +38,7 @@ class SimpleLotteryTestCase(TestCase):
 
     def testNoNumberEntry(self):
         ''' check that you cant save an entry without the numbers'''
-        p = Punter(name = 'Punter 1')
+        p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         e = Entry(punter=p, draw=self.draw)
         with self.assertRaises(IntegrityError):
@@ -45,7 +46,7 @@ class SimpleLotteryTestCase(TestCase):
 
     def testMakeEntry(self):
         ''' check that valid entries are accepted and invalid rejected'''
-        p = Punter(name = 'Punter 1')
+        p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         # check creating an entry
         e = Entry(punter=p, draw=self.draw)
@@ -55,7 +56,7 @@ class SimpleLotteryTestCase(TestCase):
         self.assertEqual(e.draw, self.draw)
         # check that numbers are correctly converted to a string
         e.entry = 1,2,3
-        self.assertEqual(e._entry, '1,2,3')
+        self.assertEqual(e.db_entry, '1,2,3')
         # check that numbers are sorted
         e.entry = 5,4,2
         self.assertEqual(e.entry, [2,4,5])
@@ -77,7 +78,7 @@ class SimpleLotteryTestCase(TestCase):
 
     def testDuplicateEntry(self):
         ''' check that same punter cannot create more than one entry'''
-        p = Punter(name = 'Punter 1')
+        p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         e = Entry(punter=p, draw=self.draw)
         e.entry = 3,4,5
@@ -91,7 +92,7 @@ class SimpleLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw._winning_combo, '1,2,3')
+        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
         self.assertEqual(self.draw.winning_combo, [2,4,5])
@@ -118,17 +119,17 @@ class SimpleLotteryResultTestCase(TestCase):
         lt.save()
         self.draw = Draw(lotterytype = lt, drawdate = datetime.datetime(2016,2,5,10,00), prize = decimal.Decimal('100.00'))
         self.draw.save()
-        p1 = Punter(name = 'Punter 1')
+        p1 = Punter(name = 'Punter 1', email='a@b.cd')
         p1.save()
-        self.e1 = Entry(punter=p1, draw=self.draw, _entry='1,2,3')
+        self.e1 = Entry(punter=p1, draw=self.draw, db_entry='1,2,3')
         self.e1.save()
-        p2 = Punter(name = 'Punter 2')
+        p2 = Punter(name = 'Punter 2', email='b@b.cd')
         p2.save()
-        self.e2 = Entry(punter=p2, draw=self.draw, _entry='2,3,4')
+        self.e2 = Entry(punter=p2, draw=self.draw, db_entry='2,3,4')
         self.e2.save()
-        p3 = Punter(name = 'Punter 3')
+        p3 = Punter(name = 'Punter 3', email='c@b.cd')
         p3.save()
-        self.e3 = Entry(punter=p3, draw=self.draw, _entry='1,3,4')
+        self.e3 = Entry(punter=p3, draw=self.draw, db_entry='1,3,4')
         self.e3.save()
 
     def testDraw(self):
@@ -180,7 +181,7 @@ class MoreComplexLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw._winning_combo, '1,2,3')
+        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
         self.assertEqual(self.draw.winning_combo, [2,4,5])
@@ -202,7 +203,7 @@ class MoreComplexLotteryTestCase(TestCase):
 
     def testNoNumberEntry(self):
         ''' check that you cant save an entry without the numbers'''
-        p = Punter(name = 'Punter 1')
+        p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         e = Entry(punter=p, draw=self.draw)
         with self.assertRaises(IntegrityError):
@@ -210,7 +211,7 @@ class MoreComplexLotteryTestCase(TestCase):
 
     def testMakeEntry(self):
         ''' check that valid entries are accepted and invalid rejected'''
-        p = Punter(name = 'Punter 1')
+        p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         # check creating an entry
         e = Entry(punter=p, draw=self.draw)
@@ -220,7 +221,7 @@ class MoreComplexLotteryTestCase(TestCase):
         self.assertEqual(e.draw, self.draw)
         # check that numbers are correctly converted to a string
         e.entry = 1,2,3
-        self.assertEqual(e._entry, '1,2,3')
+        self.assertEqual(e.db_entry, '1,2,3')
         # check that numbers are sorted
         e.entry = 5,4,2
         self.assertEqual(e.entry, [2,4,5])
@@ -242,7 +243,7 @@ class MoreComplexLotteryTestCase(TestCase):
 
     def testDuplicateEntry(self):
         ''' check that same punter cannot create more than one entry'''
-        p = Punter(name = 'Punter 1')
+        p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         e = Entry(punter=p, draw=self.draw)
         e.entry = 3,4,5
@@ -256,7 +257,7 @@ class MoreComplexLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw._winning_combo, '1,2,3')
+        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
         self.assertEqual(self.draw.winning_combo, [2,4,5])
@@ -283,17 +284,17 @@ class MoreComplexLotteryResultTestCase(TestCase):
         lt.save()
         self.draw = Draw(lotterytype = lt, drawdate = datetime.datetime(2016,2,5,10,00), prize = decimal.Decimal('100.00'))
         self.draw.save()
-        p1 = Punter(name = 'Punter 1')
+        p1 = Punter(name = 'Punter 1', email='a@b.cd')
         p1.save()
-        self.e1 = Entry(punter=p1, draw=self.draw, _entry='1,2,3')
+        self.e1 = Entry(punter=p1, draw=self.draw, db_entry='1,2,3')
         self.e1.save()
-        p2 = Punter(name = 'Punter 2')
+        p2 = Punter(name = 'Punter 2', email='b@b.cd')
         p2.save()
-        self.e2 = Entry(punter=p2, draw=self.draw, _entry='2,3,4')
+        self.e2 = Entry(punter=p2, draw=self.draw, db_entry='2,3,4')
         self.e2.save()
-        p3 = Punter(name = 'Punter 3')
+        p3 = Punter(name = 'Punter 3', email='c@c.cd')
         p3.save()
-        self.e3 = Entry(punter=p3, draw=self.draw, _entry='1,3,4')
+        self.e3 = Entry(punter=p3, draw=self.draw, db_entry='1,3,4')
         self.e3.save()
 
     def testDraw(self):

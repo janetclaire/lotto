@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block content %}
+<p>Good luck {{punter.name}}, your entry number is {{entry}}</p>
+<a href='/entries/{{punter.pk}}/'>see all your entries</a>
+{% endblock %}

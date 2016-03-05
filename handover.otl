@@ -1,0 +1,93 @@
+handover document
+	requirements
+		python 2.7 or 3.5
+		django 1.9
+		sqlite3
+	getting it running
+		starting the system
+		 go installation directory
+			 use either python or python3 throughout
+			 python manage.py migrate
+			 python manage.py makemigrations lotto
+			 python manage.py migrate
+			 python manage.py createsuperuser
+			 python manage.py runserver
+			 the site should be accessible on http://127.0.0.1:8000
+			 and the admin site on http://127.0.0.1:8000/admin
+		entering data
+			 Either start by creating a Simple Lottery Type using the admin
+			 system, then a lottery and a draw Or load the fixture using
+			 python manage.py loaddata fixtures/lotto.json
+	description
+		General
+			 I have concentrated mainly on the backend of the system, trying
+			 to design for expansion and build in thorough testing.
+			 Lotteries, Draws and Lottery Types
+			 I based the lottery on the wikipedia description of the National
+			 Lottery, but simplified.  
+			 I used the following definitions:
+			Lottery Type
+			 A desciption lottery which leaves open the possiblity of varying
+			 the prizes and the exact entries, But which defines the rules for
+			 allocating prizes.  
+			Lottery
+			 A series of lottery draws with the same rules, prizes and the
+			 possibility of a rollover from one draw to the next if no prize
+			 is allocated 
+			Draw
+			 A single draw which has a specific draw date, and will eventually
+			 have a winning combination 
+		Model
+			abstract class lottery type
+			class simple lottery type
+			 This allows a single prize which is split between all those who
+			 have the maximum number of matches with the winning combination.
+			 The number of numbers to be chosen and the range from which they
+			 should be chosen may be specified.
+			 The minimum number of matches for a win may also be specified.
+			 If the prize is not allocated it is added to the rollover for the
+			 particular lottery type.
+			class more complex lottery type
+			 This adds the ability to award prizes for anyone who has at least
+			 a specified number of matches adding more lottery type classes.
+			 This will require a model to be created as a subclass of
+			 LotteryType which defines the rules for allocating prizes 
+		Tests
+			I have written a set of test cases exercising the methods in the model.
+			Further work
+				Methods and filters in the views and admin system should also have test cases.
+				Selenium tests for the admin system and the user interface should be written, when these are more developed.
+		The admin system
+			Introduction
+			 The admin system serves two purposes.  One is to give the
+			 administrator access to all the data, and the other is to allow
+			 the draw to be made, winners to be found and prizes to be
+			 allocated.
+			 Some separation between these two functions is desirable, either
+			 by having two different admin systems or by altering the
+			 functionality according to the user group of the logged in user. 
+			 I have not implemented this separation, and so the process of
+			 making a draw is a little accident prone.
+			 There should be a more checking of the data entered and better
+			 error handling.
+			How to make a draw using the admin system
+			 First set up the draw, excluding the winning combination, and
+			 save it.
+			 When the draw is to be made, go back to the draw page, enter the
+			 winning combination and click the button "Determine Winners and
+			 Allocate Prizes"
+			 The list of entries should change to show those to whom prizes
+			 have been allocated.
+			 To get a list of the winners' details, click on the button
+			 ListWinners.
+		The user interface
+			 This is very sketchy, but there is a landing page where users can
+			 log in or register, and then make an entry or view their existing
+			 entries.
+		Main Omissions
+			security
+			informing users when they win
+			branding, formatting, improved user experience, etc
+ 		
+	
+

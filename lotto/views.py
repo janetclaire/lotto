@@ -4,6 +4,7 @@ from .forms import PunterForm, EntryForm, SigninForm
 from .models import Punter, Draw, Entry
 from django.views.generic import View, TemplateView, ListView
 from django.http import HttpResponseRedirect
+from django.contrib.auth.hashers import check_password
 
 class LandingPage(View):
     '''Page directs user to either register or sign in'''
@@ -11,10 +12,21 @@ class LandingPage(View):
     template = 'landing.html'
 
     def get(self, request):
-        form = self.fclass(request.GET)
-        if request.GET.get('email'):
-             punter = Punter.objects.get(email=request.GET.get('email'))
-             return HttpResponseRedirect('/entry/{}/'.format(punter.pk))
+        form = self.fclass()
+        print(form.Meta)
+        return render(request, self.template, {'form': form, 'title':"Welcome to our Lotteries"})
+
+    def post(self, request):
+        if request.POST.get('email'):
+            form = self.fclass(request.POST)
+            try: 
+                punter = Punter.objects.get(email=request.POST.get('email'))
+                if check_password(request.POST.get('password'), punter.password):
+                    return HttpResponseRedirect('/entry/{}/'.format(punter.pk))
+            except Punter.DoesNotExist: pass
+        else:
+            form = self.fclass(initial=request.POST)
+            print(form.Meta)
         return render(request, self.template, {'form': form, 'title':"Welcome to our Lotteries"})
 
 class PunterView(View):
@@ -41,14 +53,14 @@ class EntryView(View):
     def get(self, request, punterid):
         form = self.fclass(initial = {'punter': punterid})
         # restrict choice of draws to those that have not taken place, and which the punter has not already entered
-        form.fields['draw'].queryset = Draw.objects.filter(db_winning_combo='').exclude(entry__punter__pk=punterid)
+        form.fields['draw'].queryset = Draw.objects.filter(winning_combo='').exclude(entry__punter__pk=punterid)
         punter = Punter.objects.get(pk=punterid)
         return render(request, self.template, {'form':form, 'punter': punter, 'title':"Enter the lottery"})
 
     def post(self, request, punterid):
         form = self.fclass(data = request.POST)
         # restrict choice of draws to those that have not taken place, and which the punter has not already entered
-        form.fields['draw'].queryset = Draw.objects.filter(db_winning_combo='').exclude(entry__punter__pk=punterid)
+        form.fields['draw'].queryset = Draw.objects.filter(winning_combo='').exclude(entry__punter__pk=punterid)
         punter = Punter.objects.get(pk=punterid)
         if form.is_valid(): 
              entry = form.save()

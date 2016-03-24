@@ -16,32 +16,41 @@ class SimpleLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
+        self.draw.save()
+        d = Draw.objects.get(lotterytype = self.draw.lotterytype, drawdate = self.draw.drawdate)
+        self.assertEqual(str(d.winning_combo), '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
-        self.assertEqual(self.draw.winning_combo, [2,4,5])
+        self.draw.save()
+        d = Draw.objects.get(lotterytype = self.draw.lotterytype, drawdate = self.draw.drawdate)
+        self.assertEqual(d.winning_combo, [2,4,5])
         # check that too few numbers are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 1,2
+            self.draw.save()
         # check that too many numbers are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 1,2,3,4
+            self.draw.save()
         # check that duplicate numbers are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 1, 2, 1
+            self.draw.save()
         # check that numbers outside the range are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 4,5,6
+            self.draw.save()
         # check that non numeric values are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 'cat', 'dog', 'pig'
+            self.draw.save()
 
     def testNoNumberEntry(self):
         ''' check that you cant save an entry without the numbers'''
         p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         e = Entry(punter=p, draw=self.draw)
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(exceptions.ValidationError):
             e.save()
 
     def testMakeEntry(self):
@@ -51,30 +60,38 @@ class SimpleLotteryTestCase(TestCase):
         # check creating an entry
         e = Entry(punter=p, draw=self.draw)
         e.entry = 1,2,3
-        e.save()
         self.assertEqual(e.punter, p)
         self.assertEqual(e.draw, self.draw)
         # check that numbers are correctly converted to a string
         e.entry = 1,2,3
-        self.assertEqual(e.db_entry, '1,2,3')
+        e.save()
+        f = Entry.objects.get(punter=p, draw=self.draw)
+        self.assertEqual(str(f.entry), '1,2,3')
         # check that numbers are sorted
         e.entry = 5,4,2
-        self.assertEqual(e.entry, [2,4,5])
+        e.save()
+        f = Entry.objects.get(punter=p, draw=self.draw)
+        self.assertEqual(f.entry, [2,4,5])
         # check that too few numbers are rejected
         with self.assertRaises(ValueError):
             e.entry = 1,2
+            e.save()
         # check that too many numbers are rejected
         with self.assertRaises(ValueError):
             e.entry = 1,2,3,4
+            e.save()
         # check that duplicate numbers are rejected
         with self.assertRaises(ValueError):
             e.entry = 1, 2, 1
+            e.save()
         # check that numbers outside the range are rejected
         with self.assertRaises(ValueError):
             e.entry = 4,5,6
+            e.save()
         # check that non numeric values are rejected
         with self.assertRaises(ValueError):
             e.entry = 'cat', 'dog', 'pig'
+            e.save()
 
     def testDuplicateEntry(self):
         ''' check that same punter cannot create more than one entry'''
@@ -83,34 +100,10 @@ class SimpleLotteryTestCase(TestCase):
         e = Entry(punter=p, draw=self.draw)
         e.entry = 3,4,5
         e.save()
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(exceptions.ValidationError):
             e2 = Entry(punter=p, draw=self.draw)
             e2.entry = 3,4,5
             e2.save()
-
-    def testEnterNumbers(self):
-        '''Test the entry of numbers for the winning combination'''
-        # check that numbers are correctly converted to a string
-        self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
-        # check that numbers are sorted
-        self.draw.winning_combo = 5,4,2
-        self.assertEqual(self.draw.winning_combo, [2,4,5])
-        # check that too few numbers are rejected
-        with self.assertRaises(ValueError):
-            self.draw.winning_combo = 1,2
-        # check that too many numbers are rejected
-        with self.assertRaises(ValueError):
-            self.draw.winning_combo = 1,2,3,4
-        # check that duplicate numbers are rejected
-        with self.assertRaises(ValueError):
-            self.draw.winning_combo = 1, 2, 1
-        # check that numbers outside the range are rejected
-        with self.assertRaises(ValueError):
-            self.draw.winning_combo = 4,5,6
-        # check that non numeric values are rejected
-        with self.assertRaises(ValueError):
-            self.draw.winning_combo = 'cat', 'dog', 'pig'
 
 class SimpleLotteryResultTestCase(TestCase):
 
@@ -121,15 +114,18 @@ class SimpleLotteryResultTestCase(TestCase):
         self.draw.save()
         p1 = Punter(name = 'Punter 1', email='a@b.cd')
         p1.save()
-        self.e1 = Entry(punter=p1, draw=self.draw, db_entry='1,2,3')
+        self.e1 = Entry(punter=p1, draw=self.draw)
+        self.e1.entry='1,2,3'
         self.e1.save()
         p2 = Punter(name = 'Punter 2', email='b@b.cd')
         p2.save()
-        self.e2 = Entry(punter=p2, draw=self.draw, db_entry='2,3,4')
+        self.e2 = Entry(punter=p2, draw=self.draw)
+        self.e2.entry='2,3,4'
         self.e2.save()
         p3 = Punter(name = 'Punter 3', email='c@b.cd')
         p3.save()
-        self.e3 = Entry(punter=p3, draw=self.draw, db_entry='1,3,4')
+        self.e3 = Entry(punter=p3, draw=self.draw)
+        self.e3.entry='1,3,4'
         self.e3.save()
 
     def testDraw(self):
@@ -181,7 +177,7 @@ class MoreComplexLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
+        self.assertEqual(self.draw.winning_combo, '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
         self.assertEqual(self.draw.winning_combo, [2,4,5])
@@ -206,7 +202,7 @@ class MoreComplexLotteryTestCase(TestCase):
         p = Punter(name = 'Punter 1', email='a@b.cd')
         p.save()
         e = Entry(punter=p, draw=self.draw)
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(exceptions.ValidationError):
             e.save()
 
     def testMakeEntry(self):
@@ -220,26 +216,33 @@ class MoreComplexLotteryTestCase(TestCase):
         self.assertEqual(e.punter, p)
         self.assertEqual(e.draw, self.draw)
         # check that numbers are correctly converted to a string
-        e.entry = 1,2,3
-        self.assertEqual(e.db_entry, '1,2,3')
+        f = Entry.objects.get(punter=p, draw=self.draw)
+        self.assertEqual(str(f.entry), '1,2,3')
         # check that numbers are sorted
         e.entry = 5,4,2
-        self.assertEqual(e.entry, [2,4,5])
+        e.save()
+        f = Entry.objects.get(punter=p, draw=self.draw)
+        self.assertEqual(f.entry, [2,4,5])
         # check that too few numbers are rejected
         with self.assertRaises(ValueError):
             e.entry = 1,2
+            e.save()
         # check that too many numbers are rejected
         with self.assertRaises(ValueError):
             e.entry = 1,2,3,4
+            e.save()
         # check that duplicate numbers are rejected
         with self.assertRaises(ValueError):
             e.entry = 1, 2, 1
+            e.save()
         # check that numbers outside the range are rejected
         with self.assertRaises(ValueError):
             e.entry = 4,5,6
+            e.save()
         # check that non numeric values are rejected
         with self.assertRaises(ValueError):
             e.entry = 'cat', 'dog', 'pig'
+            e.save()
 
     def testDuplicateEntry(self):
         ''' check that same punter cannot create more than one entry'''
@@ -248,7 +251,7 @@ class MoreComplexLotteryTestCase(TestCase):
         e = Entry(punter=p, draw=self.draw)
         e.entry = 3,4,5
         e.save()
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(exceptions.ValidationError):
             e2 = Entry(punter=p, draw=self.draw)
             e2.entry = 3,4,5
             e2.save()
@@ -257,25 +260,34 @@ class MoreComplexLotteryTestCase(TestCase):
         '''Test the entry of numbers for the winning combination'''
         # check that numbers are correctly converted to a string
         self.draw.winning_combo = 1,2,3
-        self.assertEqual(self.draw.db_winning_combo, '1,2,3')
+        self.draw.save()
+        d = Draw.objects.get(drawdate = self.draw.drawdate, lotterytype = self.draw.lotterytype)
+        self.assertEqual(str(d.winning_combo), '1,2,3')
         # check that numbers are sorted
         self.draw.winning_combo = 5,4,2
-        self.assertEqual(self.draw.winning_combo, [2,4,5])
+        self.draw.save()
+        d = Draw.objects.get(drawdate = self.draw.drawdate, lotterytype = self.draw.lotterytype)
+        self.assertEqual(d.winning_combo, [2,4,5])
         # check that too few numbers are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 1,2
+            self.draw.save()
         # check that too many numbers are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 1,2,3,4
+            self.draw.save()
         # check that duplicate numbers are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 1, 2, 1
+            self.draw.save()
         # check that numbers outside the range are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 4,5,6
+            self.draw.save()
         # check that non numeric values are rejected
         with self.assertRaises(ValueError):
             self.draw.winning_combo = 'cat', 'dog', 'pig'
+            self.draw.save()
 
 class MoreComplexLotteryResultTestCase(TestCase):
 
@@ -286,15 +298,18 @@ class MoreComplexLotteryResultTestCase(TestCase):
         self.draw.save()
         p1 = Punter(name = 'Punter 1', email='a@b.cd')
         p1.save()
-        self.e1 = Entry(punter=p1, draw=self.draw, db_entry='1,2,3')
+        self.e1 = Entry(punter=p1, draw=self.draw)
+        self.e1.entry='1,2,3'
         self.e1.save()
         p2 = Punter(name = 'Punter 2', email='b@b.cd')
         p2.save()
-        self.e2 = Entry(punter=p2, draw=self.draw, db_entry='2,3,4')
+        self.e2 = Entry(punter=p2, draw=self.draw)
+        self.e2.entry='2,3,4'
         self.e2.save()
         p3 = Punter(name = 'Punter 3', email='c@c.cd')
         p3.save()
-        self.e3 = Entry(punter=p3, draw=self.draw, db_entry='1,3,4')
+        self.e3 = Entry(punter=p3, draw=self.draw)
+        self.e3.entry='1,3,4'
         self.e3.save()
 
     def testDraw(self):

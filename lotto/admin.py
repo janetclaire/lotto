@@ -1,4 +1,6 @@
 from __future__ import unicode_literals
+from django.forms import ModelForm
+from django.forms.widgets import PasswordInput
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.db.models import ObjectDoesNotExist
@@ -18,8 +20,8 @@ class DrawListFilter(admin.SimpleListFilter):
     parameter_name = 'result'
     def lookups(self, request, model_admin): return ( ('drawmade', 'draw made'), ('nodraw', 'draw not made yet'),)
     def queryset(self, request, queryset):
-        if self.value() == 'drawmade': return queryset.exclude(db_winning_combo='')
-        if self.value() == 'nodraw': return queryset.filter(db_winning_combo='')
+        if self.value() == 'drawmade': return queryset.exclude(winning_combo='')
+        if self.value() == 'nodraw': return queryset.filter(winning_combo='')
 
 class EntryListFilter(admin.SimpleListFilter):
     '''Filters the list of entries by whether or not they won a prize'''
@@ -31,7 +33,7 @@ class EntryListFilter(admin.SimpleListFilter):
         if self.value() == 'lost': return queryset.filter(win__isnull=True)
 
 class EntryAdmin(admin.ModelAdmin):
-    fields = 'draw', 'punter', 'db_entry'
+    fields = 'draw', 'punter', 'entry'
     inlines = WinInline,
     list_filter = 'draw__lotterytype', ('draw__drawdate', admin.AllValuesFieldListFilter), 'punter', EntryListFilter
     list_display = 'draw', 'punter', 'won'
@@ -49,10 +51,10 @@ class EntryInline(admin.TabularInline):
     def has_delete_persission(self, request, obj=None): return False
 
 class DrawAdmin(admin.ModelAdmin):
-    fields = 'prize', 'db_winning_combo', 'drawdate', 'lotterytype'
+    fields = 'prize', 'winning_combo', 'drawdate', 'lotterytype'
     inlines = EntryInline, #WinTable
     list_filter = 'lotterytype', ('drawdate', admin.AllValuesFieldListFilter), DrawListFilter
-    list_display = 'lotterytype', 'drawdate', 'db_winning_combo'
+    list_display = 'lotterytype', 'drawdate', 'winning_combo'
 
 class PunterListFilter(admin.SimpleListFilter):
     '''Filters the list of punters by whether or not they have won a prize'''
@@ -74,9 +76,16 @@ class PunterListFilterWin(admin.SimpleListFilter):
         if draw: return queryset.filter(entry__draw=draw, entry__win__isnull=False)
         else: return queryset
 
+class PunterAdminForm(ModelForm):
+    class Meta:
+        model = Punter
+        fields = '__all__'
+        widgets = {'password': PasswordInput}
+
 class PunterAdmin(admin.ModelAdmin):
     list_filter = PunterListFilter, PunterListFilterWin
     list_display = 'name', 'address', 'email'
+    form = PunterAdminForm
 
 admin.site.register(MoreComplexLottery)
 admin.site.register(SimpleLottery)
@@ -89,5 +98,5 @@ def allocateDraw(request, draw):
     '''Takes the winning combination from the admin/lotto/draw/change form and uses it to determine the winners of the draw,
        and allocate the prizes'''
     d = Draw.objects.get(id=draw)
-    d.makeDraw(*[int(i) for i in request.POST.get('db_winning_combo').split(',')])
+    d.makeDraw(*[int(i) for i in request.POST.get('winning_combo').split(',')])
     return HttpResponseRedirect('/admin/lotto/draw/{}/change/'.format(draw))

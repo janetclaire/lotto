@@ -11,21 +11,49 @@ from six import with_metaclass
 import decimal
 from django.utils.encoding import python_2_unicode_compatible
 from django.db.models.base import ModelBase
-from django.db import models
+from django.db import models, IntegrityError
+from django.core import exceptions
+from django.contrib.auth.hashers import make_password
 
-class LotteryNumbersDescriptor(object):
-    '''Descriptor class to convert lottery numbers between a string for storing in the db and a list of numbers'''
-    def __init__(self, field_name):
-        self.field_name = field_name
-    def __get__(self, instance, owner):
-        val = instance.__dict__[self.field_name]
-        if not val: return []
-        return [int(i) for i in val.split(',')]
-    def __set__(self, instance, val):
-        '''Check the list of numbers in val according to the appropriate rule, sort it, and store it as a string'''
-        if hasattr(instance, 'lotterytype'): instance.lotterytype.checkNumbers(val) # check numbers before saving
-        else: instance.draw.lotterytype.checkNumbers(val)
-        instance.__dict__[self.field_name] = ','.join(str(i) for i in sorted(val)) # arrange numbers in ascending order
+@python_2_unicode_compatible
+class LotteryNumberSet(list):
+    '''Custom data type to hold a set of lottery numbers'''
+    def __str__(self):
+        return ','.join(str(i) for i in self) # convert numbers to a string
+    def __init__(self, list=[]):
+        return super(LotteryNumberSet, self).__init__(list)
+
+class LotteryNumberField(models.CommaSeparatedIntegerField):
+    '''Field to hold a LotteryNumberSet and validate it according to the rules which apply to the type of lottery to which it relates'''
+    def __init__(self, *args, **kw):
+        kw['max_length'] = 30
+        super(LotteryNumberField, self).__init__(*args, **kw)
+    def deconstruct(self):
+        name, path, args, kwargs = super(LotteryNumberField, self).deconstruct()
+        del kwargs["max_length"]
+        return name, path, args, kwargs
+
+    def from_db_value(self, value, expression, connection, context):
+        return self.to_python(value)
+    @staticmethod
+    def to_python(value):
+        if not value: return LotteryNumberSet([])
+        if isinstance(value, (list, tuple)): return LotteryNumberSet(value)
+        else: return LotteryNumberSet(filter(None, (int(i) if i else None for i in value.strip('][').split(','))))
+    def get_prep_value(self, value):
+        if not value: 
+            if self.default == None: raise IntegrityError
+            else: return ''
+        else: return ','.join(str(i) for i in sorted(value)) # arrange numbers in ascending order
+
+    def validate(self, value, model_instance):
+        '''Validate the value according to the rules for the type of lottery this field is associated with'''
+        if not self.editable: return # Skip validation for non-editable fields.
+        if value is None and not self.null: raise exceptions.ValidationError(self.error_messages['null'], code='null')
+        if not self.blank and value in self.empty_values: raise exceptions.ValidationError(self.error_messages['blank'], code='blank')
+        v = LotteryNumberField.to_python(value)
+        if hasattr(model_instance, 'lotterytype'): model_instance.lotterytype.checkNumbers(v) # check numbers before saving
+        else: model_instance.draw.lotterytype.checkNumbers(v)
 
 class LotteryTypeMeta(ModelBase):
     '''Metaclass to collect the names of subclasses of LotteryType as they are created.
@@ -162,8 +190,8 @@ class Draw(models.Model):
     lotterytype = models.ForeignKey(LotteryType)
     drawdate = models.DateTimeField()
     prize = models.DecimalField(decimal_places=2, max_digits=20)
-    db_winning_combo = models.CommaSeparatedIntegerField(db_column='winning_combo', max_length=100, blank=True)
-    winning_combo = LotteryNumbersDescriptor('db_winning_combo') # use this field for in coding
+    #_winning_combo = LotteryNumberField(db_column='winning_combo', blank=True)
+    winning_combo = LotteryNumberField(blank=True) # use this field for in coding
 
     def __str__(self): return '{}, with draw on date {}'.format(self.lotterytype, self.drawdate)
 
@@ -177,6 +205,10 @@ class Draw(models.Model):
         self.save()
         self.lotterytype.findWinners(self)
         self.lotterytype.allocatePrize(self)
+    def save(self, *args, **kwargs):
+        '''validate and save the model'''
+        self.full_clean()
+        super(Draw, self).save(*args, **kwargs)
 
 @python_2_unicode_compatible
 class Punter(models.Model):
@@ -184,8 +216,11 @@ class Punter(models.Model):
     name = models.CharField(max_length=100)
     address = models.TextField(null=True)
     email = models.EmailField(unique=True)
-    password = models.BinaryField()
+    password = models.CharField(max_length=100)
     def __str__(self): return self.name
+    def save(self,*a,**kw): 
+        self.password = make_password(self.password)
+        super(Punter,self).save(*a,**kw)
 
 @python_2_unicode_compatible
 class Entry(models.Model):
@@ -193,14 +228,18 @@ class Entry(models.Model):
     punter = models.ForeignKey(Punter)
     draw = models.ForeignKey(Draw)
     time = models.DateTimeField(auto_now_add=True, blank=True)
-    db_entry = models.CommaSeparatedIntegerField(db_column='entry', max_length=100, default=None) # this field for db storage (default=None prevents blank field being automatically stored)
-    entry = LotteryNumbersDescriptor('db_entry') # use this field in coding
+    #_entry = LotteryNumberField(db_column='entry', default=None) # this field for db storage (default=None prevents blank field being automatically stored)
+    entry = LotteryNumberField(blank=None) # use this field in coding
     @property
     def won(self): return True if self.win else False
     def __str__(self): return 'Entry by {} for draw {}'.format(self.punter, self.draw)
     class Meta:
         verbose_name_plural = "Entries"
         unique_together = (('punter', 'draw'))  # dont allow punter to enter draw more than once
+    def save(self, *args, **kwargs):
+        '''validate and save the model'''
+        self.full_clean()
+        super(Entry, self).save(*args, **kwargs)
 
 @python_2_unicode_compatible
 class Win(models.Model):

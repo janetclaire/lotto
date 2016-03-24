@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-<form method=GET>
-<label>Existing Members Signin here with your email address</label><input name=email>
-<input type=submit>
+<form method=POST>{%csrf_token%}
+{{form.email.label_tag}}{{form.email}}
+{{form.password.label_tag}}{{form.password}}
+<input type=submit value=login>
 </form>
 <a href='/punter/'>New Members Please Register here</a>
 {% endblock %}

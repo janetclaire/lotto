@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head><title>handover document</title>
+<!--  $Revision: 1.43 $ -->
+<!--  $Date: 2005/06/07 13:16:40 $ -->
+<!--  $Author: noel $ -->
+<link href="nnnnnn.css" rel="stylesheet" type="text/css">
+<body>
+<div class="DocTitle">
+<h1>handover document</h1>
+</div>
+<div class="MainPage">
+<ol>
+<p  class="P1" >This is the bare bones for a Django application that will control many
+lotteries with different rules and prizes.
+The main aims of the design were were to write an application which would run
+unchanged on python 2 and python 3, and which would allow new lotteries with
+different rules to be easily incorporated. </p>
+<ol>
+<li  class="L2" >Requirements <ol>
+<li  class="L3" >python 2.7 or 3.5
+<li  class="L3" >django 1.9
+<li  class="L3" >sqlite3 (will work with other dbms's but you will need to change the settings) </ol>
+<li  class="L2" >Getting it running <ol>
+<li  class="L3" >Starting the system
+<p  class="P3" >You will need to have django 1.9 installed on your system.
+Then go to the directory where you installed this code and type the following commands
+using either python or python3 throughout </p>
+<ol>
+<li  class="L4" >python manage.py migrate
+<li  class="L4" >python manage.py makemigrations lotto
+<li  class="L4" >python manage.py migrate
+<li  class="L4" >python manage.py createsuperuser
+<li  class="L4" >python manage.py runserver </ol>
+<p  class="P3" >the site should be accessible on http://127.0.0.1:8000
+and the admin site on http://127.0.0.1:8000/admin
+</p>
+<li  class="L3" >Entering data
+<p  class="P3" >Either start by creating a Simple Lottery Type using the admin
+system, then a lottery and a draw. Or load the fixture using
+python manage.py loaddata fixtures/lotto.json </p>
+</ol>
+<li  class="L2" >Description <ol>
+<li  class="L3" >General
+<p  class="P3" >I have concentrated mainly on the backend of the system, trying
+to design for expansion and build in thorough testing.
+Lotteries, Draws and Lottery Types
+I based the lottery on the wikipedia description of the National
+Lottery, but simplified.
+I used the following definitions: </p>
+<ol>
+<li  class="L4" >Lottery Type
+<p  class="P4" >A desciption of a lottery which leaves open the possiblity of varying
+the prizes and the exact entries, but which defines the rules for
+allocating prizes.
+</p>
+<li  class="L4" >Lottery
+<p  class="P4" >A series of lottery draws with the same rules, prizes and the
+possibility of a rollover from one draw to the next if no prize
+is allocated
+</p>
+<li  class="L4" >Draw
+<p  class="P4" >A single draw which has a specific draw date, and will eventually
+have a winning combination </p>
+</ol>
+<li  class="L3" >Model <ol>
+<li  class="L4" >abstract class lottery type
+<li  class="L4" >class simple lottery type
+<p  class="P4" >This allows a single prize which is split between all those who
+have the maximum number of matches with the winning combination.
+The number of numbers to be chosen and the range from which they
+should be chosen may be specified.
+The minimum number of matches for a win may also be specified.
+If the prize is not allocated it is added to the rollover for the
+particular lottery type.
+</p>
+<li  class="L4" >class more complex lottery type
+<p  class="P4" >This adds the ability to award prizes for anyone who has at least
+a specified number of matches adding more lottery type classes.
+This will require a model to be created as a subclass of
+LotteryType which defines the rules for allocating prizes </p>
+</ol>
+<li  class="L3" >Tests <ol>
+<li  class="L4" >I have written a set of test cases exercising the methods in the model.
+<li  class="L4" >Further work <ol>
+<li  class="L5" >Methods and filters in the views and admin system should also have test cases.
+<li  class="L5" >Selenium tests for the admin system and the user interface should be written, when these are more developed. </ol>
+</ol>
+<li  class="L3" >The admin system <ol>
+<li  class="L4" >Introduction
+<p  class="P4" >The admin system serves two purposes.  One is to give the
+administrator access to all the data, and the other is to allow
+the draw to be made, winners to be found and prizes to be
+allocated.
+Some separation between these two functions is desirable, either
+by having two different admin systems or by altering the
+functionality according to the user group of the logged in user.
+I have not implemented this separation, and so the process of
+making a draw is a little accident prone.
+There should be a more checking of the data entered and better
+error handling.
+</p>
+<li  class="L4" >How to make a draw using the admin system
+<p  class="P4" >First set up the draw, excluding the winning combination, and
+save it.
+When the draw is to be made, go back to the draw page, enter the
+winning combination and click the button "Determine Winners and
+Allocate Prizes"
+The list of entries should change to show those to whom prizes
+have been allocated.
+To get a list of the winners' details, click on the button
+ListWinners. </p>
+</ol>
+<li  class="L3" >The user interface <ol>
+<p  class="P4" >This is very sketchy, but there is a landing page where users can
+log in or register, and then make an entry or view their existing
+entries. </p>
+</ol>
+<li  class="L3" >Main Omissions <ol>
+<li  class="L4" >security
+<li  class="L4" >informing users when they win
+<li  class="L4" >branding, formatting, improved user experience, etc </ol>
+</ol>
+</ol>
+</ol>
+</div>
+<div class="Footer">
+<hr>
+
+<br>
+handover.otl&nbsp&nbsp 2016/03/24 17:17
+</div>
+</body></html>
